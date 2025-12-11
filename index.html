@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Spanish Practice — Flashcards & Quizzes</title>
+<style>
+  :root{
+    --bg:#0f1724;
+    --card:#0b1220;
+    --accent:#ffb86b;
+    --muted:#9aa4b2;
+    --glass: rgba(255,255,255,0.03);
+    --radius:14px;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#071025 0%, #0b1220 60%);color:#e6eef6}
+  .container{max-width:1100px;margin:28px auto;padding:24px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  header h1{font-size:20px;margin:0}
+  header .subtitle{color:var(--muted);font-size:13px}
+  .app{display:grid;grid-template-columns:260px 1fr;gap:20px}
+  nav{background:var(--glass);padding:16px;border-radius:12px;min-height:420px}
+  nav button{display:block;width:100%;padding:10px 12px;margin-bottom:8px;border:0;background:transparent;color:var(--muted);text-align:left;border-radius:8px;cursor:pointer}
+  nav button.active{background:linear-gradient(90deg, rgba(255,184,107,0.12), rgba(255,184,107,0.04));color:var(--accent);font-weight:600}
+  main{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:20px;border-radius:14px;min-height:420px}
+  .panel{display:none}
+  .panel.active{display:block}
+  .row{display:flex;gap:12px;align-items:center}
+  .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  input[type=text], textarea, select{background:#071429;border:1px solid rgba(255,255,255,0.03);color:inherit;padding:10px;border-radius:8px;width:100%}
+  .big{font-size:28px;font-weight:600}
+  .muted{color:var(--muted);font-size:13px}
+  .btn{padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),#ff8b6b);color:#061018}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+  .center{display:flex;align-items:center;justify-content:center}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .choice{padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;background:rgba(255,255,255,0.01)}
+  .choice.correct{border-color:rgba(63,224,155,0.9);background:rgba(63,224,155,0.06);color:#bff6de}
+  .choice.wrong{border-color:rgba(255,113,113,0.95);background:rgba(255,113,113,0.06);color:#ffcfcf}
+  .small{font-size:13px;padding:6px 8px}
+  footer{margin-top:18px;color:var(--muted);font-size:13px}
+  .list{max-height:300px;overflow:auto;margin-top:10px}
+  .word-row{display:flex;gap:10px;align-items:center;padding:8px;border-radius:8px}
+  .word-row:nth-child(odd){background:rgba(255,255,255,0.01)}
+  .tag{background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:8px;color:var(--muted);font-size:12px}
+  .flex{display:flex;gap:8px;align-items:center}
+  .right{margin-left:auto}
+  .danger{background:#ff6b6b;color:#051014}
+  .good{background:#3fe09b;color:#051014}
+  .kbd{background:#07172a;border-radius:6px;padding:4px 6px;border:1px solid rgba(255,255,255,0.02);font-size:13px}
+  .top-actions{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  @media (max-width:880px){
+    .app{grid-template-columns:1fr; }
+    nav{order:2}
+    main{order:1;margin-bottom:10px}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>Spanish Practice</h1>
+      <div class="subtitle">Flashcards • Quiz • Type & Listen — progress saved locally</div>
+    </div>
+    <div class="muted">Built for practicing Spanish — open-source & offline</div>
+  </header>
+
+  <div class="app">
+    <nav class="card">
+      <div class="top-actions">
+        <button id="btn-import" class="btn ghost small" title="Import vocabulary">Import</button>
+        <button id="btn-export" class="btn ghost small" title="Export vocabulary">Export</button>
+      </div>
+
+      <button class="active" data-panel="flash" id="nav-flash">Flashcards</button>
+      <button data-panel="quiz" id="nav-quiz">Quiz (Multiple Choice)</button>
+      <button data-panel="type" id="nav-type">Type & Listen</button>
+      <button data-panel="manage" id="nav-manage">Add / Manage Words</button>
+
+      <hr style="border:none;height:1px;background:rgba(255,255,255,0.02);margin:12px 0;border-radius:2px" />
+      <div class="muted" style="font-size:13px">Stats</div>
+      <div style="margin-top:8px">
+        <div class="muted">Words: <span id="stat-words">0</span></div>
+        <div class="muted">Sessions: <span id="stat-sessions">0</span></div>
+      </div>
+      <hr style="border:none;height:1px;background:rgba(255,255,255,0.02);margin:12px 0;border-radius:2px" />
+      <div class="muted" style="font-size:13px">Shortcuts</div>
+      <div style="margin-top:8px" class="muted">
+        <div><span class="kbd">Space</span> flip / next</div>
+        <div><span class="kbd">1-4</span> choose answer in quiz</div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- FLASHCARDS -->
+      <section id="flash" class="panel active">
+        <div class="row" style="gap:18px;align-items:flex-start">
+          <div style="flex:1">
+            <div class="card">
+              <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between">
+                <div>
+                  <div class="muted">Flashcard</div>
+                  <div id="card-word" class="big" style="margin-top:8px">—</div>
+                  <div id="card-info" class="muted" style="margin-top:8px">Language: Spanish → English</div>
+                </div>
+                <div style="min-width:120px;text-align:right">
+                  <div class="muted">Mode</div>
+                  <select id="flash-direction" style="margin-top:8px">
+                    <option value="es-en">Spanish → English</option>
+                    <option value="en-es">English → Spanish</option>
+                  </select>
+                  <div style="margin-top:10px" class="muted">Audio</div>
+                  <div style="margin-top:6px">
+                    <button id="speak-word" class="btn small ghost">🔊 Speak</button>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:14px" class="muted">Translation</div>
+              <div id="card-translation" class="muted" style="margin-top:8px;font-size:18px">—</div>
+
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button id="flip" class="btn ghost small">Flip</button>
+                <button id="next-card" class="btn primary small">Next</button>
+                <div class="right">
+                  <button id="mark-known" class="btn small good">Mark Known</button>
+                  <button id="mark-hard" class="btn small danger">Mark Hard</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px" class="card">
+              <div class="muted">Session Controls</div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button id="shuffle" class="btn ghost small">Shuffle Deck</button>
+                <button id="reset-progress" class="btn ghost small">Reset Progress</button>
+                <label style="margin-left:auto" class="muted">Auto-speak<input type="checkbox" id="auto-speak" style="margin-left:8px" /></label>
+              </div>
+            </div>
+          </div>
+
+          <div style="width:320px">
+            <div class="card">
+              <div class="muted">Upcoming Words</div>
+              <div class="list" id="upcoming-list" style="margin-top:8px"></div>
+            </div>
+
+            <div class="card" style="margin-top:12px">
+              <div class="muted">Quick Import</div>
+              <div style="margin-top:8px" class="muted">Paste lines like <code>hola, hello</code> (one per line).</div>
+              <textarea id="quick-import" rows="5" style="margin-top:8px"></textarea>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button id="apply-quick" class="btn primary small">Import</button>
+                <button id="load-sample" class="btn ghost small">Load Sample Set</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- QUIZ -->
+      <section id="quiz" class="panel">
+        <div class="card">
+          <div class="muted">Multiple Choice Quiz</div>
+          <div style="display:flex;gap:12px;align-items:center;margin-top:8px">
+            <div style="flex:1">
+              <select id="quiz-direction">
+                <option value="es-en">Spanish → English</option>
+                <option value="en-es">English → Spanish</option>
+              </select>
+            </div>
+            <div>
+              <input id="quiz-count" type="number" min="1" max="50" value="6" style="width:84px" />
+            </div>
+            <div>
+              <button id="start-quiz" class="btn primary">Start Quiz</button>
+            </div>
+          </div>
+
+          <div id="quiz-area" style="margin-top:14px;display:none">
+            <div class="muted">Question <span id="q-index">1</span> / <span id="q-total">6</span></div>
+            <div id="q-word" class="big" style="margin-top:10px">—</div>
+            <div class="choices" id="q-choices"></div>
+            <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+              <div id="q-result" class="muted">Choose an answer</div>
+              <button id="q-next" class="btn ghost small right">Next</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TYPE & LISTEN -->
+      <section id="type" class="panel">
+        <div class="card">
+          <div class="muted">Type & Listen Practice</div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+            <select id="type-direction">
+              <option value="es-en">Hear Spanish → Type English</option>
+              <option value="en-es">Hear English → Type Spanish</option>
+            </select>
+            <label class="muted right">Show hints<input type="checkbox" id="type-hint" style="margin-left:8px" /></label>
+          </div>
+
+          <div style="margin-top:12px">
+            <div id="type-prompt" class="big">—</div>
+            <div style="margin-top:8px" class="muted">Type the translation below</div>
+            <input id="type-input" type="text" placeholder="Type your answer..." style="margin-top:8px" />
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button id="type-say" class="btn ghost small">🔊 Say</button>
+              <button id="type-check" class="btn primary small">Check</button>
+              <button id="type-skip" class="btn ghost small">Skip</button>
+              <div class="right muted">Correct: <span id="type-correct">0</span> / <span id="type-total">0</span></div>
+            </div>
+            <div id="type-feedback" style="margin-top:10px" class="muted"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MANAGE / IMPORT -->
+      <section id="manage" class="panel">
+        <div class="card">
+          <div class="muted">Add / Manage Words</div>
+
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <input id="new-es" type="text" placeholder="Spanish (e.g. hola)" />
+            <input id="new-en" type="text" placeholder="English translation (e.g. hello)" />
+            <button id="add-word" class="btn primary">Add</button>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <div class="muted">Filter</div>
+            <input id="filter" type="text" placeholder="Search..." style="width:260px" />
+            <button id="clear-words" class="btn ghost small right">Clear All</button>
+          </div>
+
+          <div class="list" id="words-list" style="margin-top:10px"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="muted">
+    Tip: For best audio, use a modern browser (Chrome/Edge/Safari). This app uses browser Text-to-Speech if available.
+  </footer>
+</div>
+
+<script>
+/*
+  Spanish Practice app - client-side only
+  Features:
+   - Manage words (localStorage)
+   - Flashcards with flip, auto-speak, mark known/hard
+   - Multiple-choice quiz
+   - Type & Listen practice
+   - Import / Export JSON and quick paste
+*/
+
+const STORAGE_KEY = 'spanish_practice_v1';
+const SESSION_KEY = 'spanish_practice_sessions';
+
+let state = {
+  words: [], // {es, en, known:0.., hard:0..}
+  sessions: 0,
+  progress: {},
+};
+
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  document.getElementById('stat-words').innerText = state.words.length;
+  document.getElementById('stat-sessions').innerText = state.sessions;
+}
+
+function loadState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){ try{ state = JSON.parse(raw); }catch(e){ console.warn('corrupt storage, resetting'); state.words=[]; } }
+  if(!state.words) state.words = [];
+  if(!state.sessions) state.sessions = 0;
+  saveState();
+}
+
+loadState();
+
+/* ===== Navigation ===== */
+document.querySelectorAll('nav button[data-panel]').forEach(b=>{
+  b.addEventListener('click', ()=> {
+    document.querySelectorAll('nav button[data-panel]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const p = b.dataset.panel;
+    document.querySelectorAll('.panel').forEach(panel=>panel.classList.remove('active'));
+    document.getElementById(p).classList.add('active');
+    if(p==='manage') renderWords();
+  });
+});
+
+/* ===== Utility ===== */
+function sampleWords(){
+  return [
+    {es:'hola', en:'hello'},
+    {es:'adiós', en:'goodbye'},
+    {es:'por favor', en:'please'},
+    {es:'gracias', en:'thank you'},
+    {es:'lo siento', en:'sorry'},
+    {es:'buenos días', en:'good morning'},
+    {es:'buenas noches', en:'good night'},
+    {es:'sí', en:'yes'},
+    {es:'no', en:'no'},
+    {es:'¿Cómo estás?', en:'How are you?'},
+    {es:'bien', en:'well/fine'},
+    {es:'¿Dónde?', en:'Where?'},
+    {es:'¿Por qué?', en:'Why?'},
+    {es:'hoy', en:'today'},
+    {es:'mañana', en:'tomorrow'},
+  ];
+}
+
+function speak(text, lang='es-ES'){
+  if(!('speechSynthesis' in window)) return;
+  try{
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+  }catch(e){console.warn(e)}
+}
+
+/* ===== Manage Words ===== */
+function addWord(es, en){
+  if(!es || !en) return false;
+  state.words.push({es: es.trim(), en: en.trim(), known:0, hard:0, id: Date.now() + Math.random()});
+  saveState();
+  renderWords();
+  return true;
+}
+document.getElementById('add-word').addEventListener('click', ()=>{
+  const es = document.getElementById('new-es').value;
+  const en = document.getElementById('new-en').value;
+  if(addWord(es,en)){
+    document.getElementById('new-es').value=''; document.getElementById('new-en').value='';
+    showToast('Word added');
+  } else showToast('Enter both Spanish and English');
+});
+
+document.getElementById('clear-words').addEventListener('click', ()=>{
+  if(!confirm('Clear all words? This cannot be undone.')) return;
+  state.words = [];
+  saveState();
+  renderWords();
+});
+
+function renderWords(filter=''){
+  const list = document.getElementById('words-list');
+  list.innerHTML = '';
+  const f = filter.toLowerCase().trim();
+  state.words.forEach(w=>{
+    if(f && !(w.es.toLowerCase().includes(f) || w.en.toLowerCase().includes(f))) return;
+    const row = document.createElement('div');
+    row.className = 'word-row';
+    row.innerHTML = `
+      <div style="min-width:140px"><strong>${escapeHtml(w.es)}</strong></div>
+      <div class="muted">${escapeHtml(w.en)}</div>
+      <div class="right flex">
+        <div class="tag">known:${w.known}</div>
+        <div class="tag">hard:${w.hard}</div>
+        <button class="btn ghost small" data-id="${w.id}" title="speak">🔊</button>
+        <button class="btn ghost small" data-edit="${w.id}">✏️</button>
+        <button class="btn ghost small" data-del="${w.id}">🗑️</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('filter').addEventListener('input', (e)=>renderWords(e.target.value));
+
+document.getElementById('words-list').addEventListener('click', (e)=>{
+  const id = e.target.getAttribute('data-id');
+  const del = e.target.getAttribute('data-del');
+  const edit = e.target.getAttribute('data-edit');
+  if(id){
+    const w = state.words.find(x=>String(x.id)===id);
+    if(w) speak(w.es, 'es-ES');
+  } else if(del){
+    if(!confirm('Delete this word?')) return;
+    state.words = state.words.filter(x=>String(x.id)!==del);
+    saveState(); renderWords();
+  } else if(edit){
+    const w = state.words.find(x=>String(x.id)===edit);
+    if(!w) return;
+    const newEs = prompt('Edit Spanish', w.es);
+    if(newEs===null) return;
+    const newEn = prompt('Edit English', w.en);
+    if(newEn===null) return;
+    w.es = newEs.trim(); w.en = newEn.trim();
+    saveState(); renderWords();
+  }
+});
+
+/* ===== Quick Import & Sample ===== */
+document.getElementById('apply-quick').addEventListener('click', ()=>{
+  const text = document.getElementById('quick-import').value;
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  let added=0;
+  lines.forEach(line=>{
+    const parts = line.split(',');
+    if(parts.length>=2){
+      if(addWord(parts[0], parts.slice(1).join(',').trim())) added++;
+    }
+  });
+  document.getElementById('quick-import').value='';
+  showToast(`${added} words added`);
+});
+document.getElementById('load-sample').addEventListener('click', ()=>{
+  if(!confirm('Load sample words? This will append to your current list.')) return;
+  sampleWords().forEach(s=>addWord(s.es, s.en));
+  showToast('Sample words loaded');
+});
+
+/* ===== Import / Export JSON ===== */
+document.getElementById('btn-export').addEventListener('click', ()=>{
+  const data = JSON.stringify(state.words, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'spanish_words.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('btn-import').addEventListener('click', ()=>{
+  const file = document.createElement('input');
+  file.type='file'; file.accept='application/json';
+  file.onchange = (e)=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      try{
+        const parsed = JSON.parse(ev.target.result);
+        if(Array.isArray(parsed)){
+          parsed.forEach(p=>{
+            if(p.es && p.en) addWord(p.es, p.en);
+          });
+          showToast('Imported ' + parsed.length + ' entries');
+        } else showToast('Invalid file');
+      }catch(err){ showToast('Failed to parse JSON') }
+    };
+    reader.readAsText(f);
+  };
+  file.click();
+});
+
+/* ===== Flashcards ===== */
+let flashDeck = [];
+let flashIndex = 0;
+let flashFlipped = false;
+
+function rebuildDeck(){
+  flashDeck = state.words.slice();
+  // sort: bring 'hard' ones earlier
+  flashDeck.sort((a,b)=> (b.hard||0)-(a.hard||0) || (a.known||0)-(b.known||0) );
+  flashIndex = 0;
+  flashFlipped = false;
+  renderFlash();
+}
+function renderFlash(){
+  document.getElementById('stat-words').innerText = state.words.length;
+  const cardWord = document.getElementById('card-word');
+  const cardTrans = document.getElementById('card-translation');
+  const info = document.getElementById('card-info');
+  const upcoming = document.getElementById('upcoming-list');
+  if(!flashDeck.length){
+    cardWord.innerText = '—';
+    cardTrans.innerText = 'No words — add some in "Add / Manage Words"';
+    upcoming.innerHTML = '';
+    return;
+  }
+  const current = flashDeck[flashIndex % flashDeck.length];
+  const dir = document.getElementById('flash-direction').value;
+  if(!flashFlipped){
+    cardWord.innerText = dir==='es-en'? current.es : current.en;
+    cardTrans.innerText = '—';
+  } else {
+    cardWord.innerText = dir==='es-en'? current.es : current.en;
+    cardTrans.innerText = dir==='es-en'? current.en : current.es;
+  }
+  cardWord.dataset.id = current.id;
+  info.innerText = `Mode: ${dir==='es-en'?'Spanish → English':'English → Spanish'} • Card ${flashIndex+1}/${flashDeck.length}`;
+  upcoming.innerHTML = '';
+  for(let i=1;i<6;i++){
+    const w = flashDeck[(flashIndex+i)%flashDeck.length];
+    if(!w) break;
+    const el = document.createElement('div');
+    el.className='word-row';
+    el.innerHTML = `<div style="min-width:160px">${escapeHtml(w.es)}</div><div class="muted">${escapeHtml(w.en)}</div>`;
+    upcoming.appendChild(el);
+  }
+}
+
+document.getElementById('flip').addEventListener('click', ()=>{
+  flashFlipped = !flashFlipped;
+  renderFlash();
+});
+document.getElementById('next-card').addEventListener('click', ()=>{
+  flashIndex = (flashIndex + 1) % Math.max(1,flashDeck.length);
+  flashFlipped = false;
+  renderFlash();
+});
+document.getElementById('shuffle').addEventListener('click', ()=>{
+  for(let i=flashDeck.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [flashDeck[i], flashDeck[j]] = [flashDeck[j], flashDeck[i]];
+  }
+  flashIndex = 0; flashFlipped=false; renderFlash();
+});
+document.getElementById('mark-known').addEventListener('click', ()=>{
+  const id = document.getElementById('card-word').dataset.id;
+  const w = state.words.find(x=>String(x.id)===String(id));
+  if(w){ w.known = (w.known||0) + 1; saveState(); showToast('Marked known'); }
+  flashIndex++; flashFlipped=false; renderFlash();
+});
+document.getElementById('mark-hard').addEventListener('click', ()=>{
+  const id = document.getElementById('card-word').dataset.id;
+  const w = state.words.find(x=>String(x.id)===String(id));
+  if(w){ w.hard = (w.hard||0) + 1; saveState(); showToast('Marked hard'); }
+  flashIndex++; flashFlipped=false; renderFlash();
+});
+document.getElementById('reset-progress').addEventListener('click', ()=>{
+  state.words.forEach(w=>{ w.known=0; w.hard=0; });
+  saveState();
+  showToast('Progress reset');
+  rebuildDeck();
+});
+
+document.getElementById('flash-direction').addEventListener('change', ()=> renderFlash());
+document.getElementById('speak-word').addEventListener('click', ()=>{
+  const id = document.getElementById('card-word').dataset.id;
+  const w = state.words.find(x=>String(x.id)===String(id));
+  if(!w) return;
+  const lang = document.getElementById('flash-direction').value==='es-en'?'es-ES':'en-US';
+  speak(document.getElementById('flash-direction').value==='es-en'? w.es : w.en, lang);
+});
+document.getElementById('auto-speak').addEventListener('change', (e)=>{
+  // no-op — used below when changing cards
+});
+
+document.addEventListener('keydown', (e)=>{
+  if(e.code === 'Space'){
+    e.preventDefault();
+    // flip or next
+    if(document.getElementById('flash').classList.contains('active')){
+      if(!flashFlipped) flashFlipped=true;
+      else flashIndex++;
+      renderFlash();
+      if(document.getElementById('auto-speak').checked){
+        const id = document.getElementById('card-word').dataset.id;
+        const w = state.words.find(x=>String(x.id)===String(id));
+        if(w) speak(document.getElementById('flash-direction').value==='es-en'? w.es : w.en,
+                   document.getElementById('flash-direction').value==='es-en'?'es-ES':'en-US');
+      }
+    } else if(document.getElementById('quiz').classList.contains('active')){
+      // space -> next
+      document.getElementById('q-next').click();
+    }
+  }
+  // 1-4 for choices
+  if(/[Digit1-4]/.test(e.code) && document.getElementById('quiz').classList.contains('active')){
+    const idx = Number(e.code.replace('Digit','')) - 1;
+    const choiceEls = document.querySelectorAll('#q-choices .choice');
+    if(choiceEls && choiceEls[idx]) choiceEls[idx].click();
+  }
+});
+
+/* ===== Quiz ===== */
+let quiz = {items:[], index:0, total:6, correct:0};
+
+document.getElementById('start-quiz').addEventListener('click', ()=>{
+  const count = Math.min(50, Math.max(1, Number(document.getElementById('quiz-count').value || 6)));
+  const dir = document.getElementById('quiz-direction').value;
+  const pool = state.words.slice();
+  if(pool.length < 2){ alert('Add at least 2 words for quiz'); return; }
+  // random sample
+  const picked = [];
+  for(let i=0; i<count && pool.length;i++){
+    const idx = Math.floor(Math.random()*pool.length);
+    picked.push(pool.splice(idx,1)[0]);
+  }
+  quiz = {items: picked, index:0, total: picked.length, correct:0, dir};
+  document.getElementById('q-total').innerText = quiz.total;
+  document.getElementById('q-index').innerText = 1;
+  document.getElementById('q-result').innerText = 'Choose an answer';
+  document.getElementById('quiz-area').style.display = 'block';
+  renderQuizQuestion();
+});
+
+function renderQuizQuestion(){
+  const q = quiz.items[quiz.index];
+  document.getElementById('q-index').innerText = quiz.index+1;
+  const dir = quiz.dir;
+  document.getElementById('q-word').innerText = dir==='es-en'? q.es : q.en;
+  // build choices: correct + 3 distractors
+  const distractors = [];
+  const pool = state.words.filter(w=>w.id !== q.id);
+  while(distractors.length < 3 && pool.length){
+    const idx = Math.floor(Math.random()*pool.length);
+    distractors.push(pool.splice(idx,1)[0]);
+  }
+  const options = [q, ...distractors].sort(()=>Math.random()-0.5);
+  const container = document.getElementById('q-choices');
+  container.innerHTML = '';
+  options.forEach((opt,i)=>{
+    const div = document.createElement('div');
+    div.className='choice';
+    div.innerText = dir==='es-en'? opt.en : opt.es;
+    div.dataset.id = opt.id;
+    div.addEventListener('click', ()=>{
+      // prevent double click
+      if(container.querySelector('.choice.selected')) return;
+      div.classList.add('selected');
+      const correct = (opt.id === q.id);
+      if(correct){
+        div.classList.add('correct'); quiz.correct++;
+        document.getElementById('q-result').innerText = 'Correct';
+      } else {
+        div.classList.add('wrong'); document.getElementById('q-result').innerText = 'Wrong';
+        // mark wrong item
+        const wrongItem = state.words.find(x=>x.id===opt.id);
+        if(wrongItem) wrongItem.hard = (wrongItem.hard||0)+1;
+      }
+      // highlight correct one
+      const all = Array.from(container.children);
+      all.forEach(c=>{
+        if(c.dataset.id == q.id) c.classList.add('correct');
+      });
+    });
+    container.appendChild(div);
+  });
+}
+
+document.getElementById('q-next').addEventListener('click', ()=>{
+  quiz.index++;
+  if(quiz.index >= quiz.total){
+    // finish
+    alert('Quiz finished! Score: ' + quiz.correct + ' / ' + quiz.total);
+    state.sessions = (state.sessions || 0) + 1;
+    saveState();
+    document.getElementById('quiz-area').style.display = 'none';
+  } else {
+    document.getElementById('q-result').innerText = 'Choose an answer';
+    renderQuizQuestion();
+  }
+});
+
+/* ===== Type & Listen ===== */
+let typeSession = {index:0,total:0,correct:0,items:[]};
+
+function startType(){
+  const dir = document.getElementById('type-direction').value;
+  const pool = state.words.slice();
+  if(pool.length===0){ alert('Add some words first'); return; }
+  const items = pool.sort(()=>Math.random()-0.5);
+  typeSession = {index:0,total:items.length,correct:0,items,dir};
+  document.getElementById('type-total').innerText = typeSession.total;
+  document.getElementById('type-correct').innerText = 0;
+  loadTypeItem();
+}
+
+function loadTypeItem(){
+  if(typeSession.index >= typeSession.total){
+    alert('Session finished! Score: ' + typeSession.correct + ' / ' + typeSession.total);
+    state.sessions = (state.sessions||0) + 1;
+    saveState();
+    return;
+  }
+  const cur = typeSession.items[typeSession.index];
+  const dir = typeSession.dir;
+  document.getElementById('type-prompt').innerText = dir==='es-en'? cur.es : cur.en;
+  document.getElementById('type-input').value = '';
+  document.getElementById('type-feedback').innerText = '';
+}
+
+document.getElementById('type-say').addEventListener('click', ()=>{
+  const cur = typeSession.items[typeSession.index];
+  if(!cur) return;
+  const lang = typeSession.dir === 'es-en' ? 'es-ES' : 'en-US';
+  speak(typeSession.dir === 'es-en' ? cur.es : cur.en, lang);
+});
+document.getElementById('type-check').addEventListener('click', ()=>{
+  const cur = typeSession.items[typeSession.index];
+  if(!cur) return;
+  const input = document.getElementById('type-input').value.trim().toLowerCase();
+  const target = (typeSession.dir === 'es-en' ? cur.en : cur.es).trim().toLowerCase();
+  const hintEnabled = document.getElementById('type-hint').checked;
+  let ok = false;
+  if(input === target) ok = true;
+  else {
+    // loose matching: remove punctuation + compare word by word
+    const normalize = s => s.replace(/[^\w\s]/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if(normalize(input) === normalize(target)) ok = true;
+  }
+  if(ok){
+    typeSession.correct++; document.getElementById('type-correct').innerText = typeSession.correct;
+    document.getElementById('type-feedback').innerText = 'Correct ✅ — ' + (typeSession.dir==='es-en'? cur.en : cur.es);
+    typeSession.index++;
+    setTimeout(loadTypeItem, 600);
+  } else {
+    document.getElementById('type-feedback').innerText = 'Incorrect — answer: ' + (typeSession.dir==='es-en'? cur.en : cur.es);
+    if(hintEnabled){
+      // show first letter hint
+      const t = typeSession.dir==='es-en'? cur.en : cur.es;
+      document.getElementById('type-input').value = t[0];
+    }
+  }
+});
+document.getElementById('type-skip').addEventListener('click', ()=>{
+  typeSession.index++;
+  loadTypeItem();
+});
+
+document.getElementById('type-direction').addEventListener('change', startType);
+
+/* ===== Helpers ===== */
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showToast(msg){
+  // tiny non-blocking toast
+  const t = document.createElement('div');
+  t.style.position='fixed'; t.style.right='16px'; t.style.bottom='16px';
+  t.style.background='rgba(2,6,23,0.9)'; t.style.padding='10px 14px'; t.style.borderRadius='10px';
+  t.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)'; t.style.color='white'; t.style.zIndex=9999;
+  t.innerText = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.transition='opacity 300ms'; t.style.opacity=0; setTimeout(()=>t.remove(),350)}, 1600);
+}
+
+/* ===== Init ===== */
+rebuildDeck();
+renderWords();
+document.getElementById('stat-words').innerText = state.words.length;
+document.getElementById('stat-sessions').innerText = state.sessions;
+
+/* If empty, offer sample set (non-blocking) */
+if(state.words.length === 0){
+  // silent suggestion
+  // auto-load a few so the user can try quickly
+  sampleWords().slice(0,6).forEach(s=> addWord(s.es, s.en));
+  rebuildDeck();
+}
+
+/* Accessibility note: spacebar flips; 1-4 selects in quiz (see header) */
+
+</script>
+</body>
+</html>
