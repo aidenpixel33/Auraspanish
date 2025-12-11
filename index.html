@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spanish Practice</title>
+<style>
+  :root{
+    --bg:#d6ecff;
+    --card:#ffffff;
+    --accent:#3a8bff;
+    --muted:#5c6b7a;
+    --radius:14px;
+    font-family: Inter, system-ui, Arial;
+  }
+  body{
+    margin:0;
+    background:linear-gradient(180deg,#b8dbff 0%, #d6ecff 60%);
+    display:flex;
+    justify-content:center;
+    padding:20px;
+    color:#1d2a38;
+  }
+  .container{
+    width:100%;
+    max-width:900px;
+  }
+  .banner{
+    background:var(--accent);
+    color:white;
+    padding:12px;
+    border-radius:var(--radius);
+    text-align:center;
+    font-weight:600;
+    margin-bottom:20px;
+  }
+  .nav{
+    display:flex;
+    gap:10px;
+    margin-bottom:20px;
+  }
+  .nav button{
+    flex:1;
+    padding:12px;
+    border:none;
+    border-radius:var(--radius);
+    background:#ffffffaa;
+    cursor:pointer;
+    font-size:16px;
+  }
+  .nav button.active{
+    background:var(--accent);
+    color:white;
+  }
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{
+    background:var(--card);
+    padding:25px;
+    border-radius:var(--radius);
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    margin-bottom:20px;
+    position:relative;
+    perspective:1000px;
+  }
+  .flash-card-inner{
+    width:100%; height:200px;
+    position:relative;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+  }
+  .flash-front, .flash-back{
+    position:absolute; width:100%; height:100%;
+    backface-visibility:hidden;
+    display:flex; justify-content:center; align-items:center;
+    font-size:36px; font-weight:600;
+    border-radius:var(--radius);
+  }
+  .flash-back{
+    transform: rotateY(180deg);
+    font-size:28px;
+    color:var(--muted);
+  }
+  .btn{
+    padding:12px 20px;
+    border:none;
+    border-radius:var(--radius);
+    background:var(--accent);
+    color:white;
+    cursor:pointer;
+    font-size:16px;
+    margin-top:10px;
+  }
+  .quiz-input{
+    width:100%;
+    padding:12px;
+    font-size:16px;
+    border-radius:var(--radius);
+    border:1px solid #ccc;
+  }
+  .correct-animation{
+    animation: correctAnim 0.5s;
+  }
+  .wrong-animation{
+    animation: wrongAnim 0.5s;
+  }
+  @keyframes correctAnim {
+    0%{transform: scale(1)}
+    50%{transform: scale(1.2)}
+    100%{transform: scale(1)}
+  }
+  @keyframes wrongAnim {
+    0%{transform: translateX(0)}
+    25%{transform: translateX(-10px)}
+    50%{transform: translateX(10px)}
+    75%{transform: translateX(-10px)}
+    100%{transform: translateX(0)}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="banner">Flip + Check — Enter, New Words + Next — Shift</div>
+
+  <div class="nav">
+    <button data-panel="flash" class="active">Flashcards</button>
+    <button data-panel="quiz">Quiz</button>
+  </div>
+
+  <!-- FLASHCARDS -->
+  <section id="flash" class="panel active">
+    <div class="card">
+      <div id="flash-card" class="flash-card-inner">
+        <div id="flash-front" class="flash-front">Press Next</div>
+        <div id="flash-back" class="flash-back"></div>
+      </div>
+    </div>
+    <button class="btn" onclick="flipFlash()">Flip</button>
+    <button class="btn" onclick="nextFlash()" style="background:#5c6b7a;">Next</button>
+
+    <div style="margin-top:20px;">
+      <textarea id="import-text" placeholder="Paste words as: hola, hello" style="width:100%; padding:10px; border-radius:var(--radius); margin-top:10px;"></textarea>
+      <button class="btn" onclick="importWords()">Import Words</button>
+      <button class="btn" onclick="exportWords()" style="background:#5c6b7a;">Export Words</button>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" class="panel">
+    <div class="card">
+      <h2>Quiz Mode</h2>
+      <div id="quiz-word" style="font-size:26px; margin-bottom:15px;">Press New Word</div>
+      <input id="quiz-input" class="quiz-input" placeholder="English meaning..." />
+      <button class="btn" onclick="checkQuiz()">Check</button>
+      <button class="btn" onclick="newQuiz()" style="background:#5c6b7a;">New Word</button>
+      <div id="quiz-result" style="margin-top:15px; font-size:20px;"></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  // Load saved words or use default
+  let words = JSON.parse(localStorage.getItem('spanish_words')) || [
+    {es:"hola",en:"hello"},
+    {es:"adiós",en:"goodbye"},
+    {es:"gracias",en:"thank you"},
+    {es:"por favor",en:"please"},
+  ];
+
+  function saveWords(){
+    localStorage.setItem('spanish_words', JSON.stringify(words));
+  }
+
+  // Navigation
+  document.querySelectorAll('.nav button').forEach(btn=>{
+    btn.onclick=()=>{
+      document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const panel=btn.dataset.panel;
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      document.getElementById(panel).classList.add('active');
+    }
+  });
+
+  // FLASHCARDS
+  let flashWord=null;
+  function nextFlash(){
+    if(words.length===0) return alert('Add some words first!');
+    flashWord = words[Math.floor(Math.random()*words.length)];
+    document.getElementById('flash-front').innerText = flashWord.es;
+    document.getElementById('flash-back').innerText = flashWord.en;
+    document.getElementById('flash-card').style.transform='rotateY(0deg)';
+  }
+  function flipFlash(){
+    const card = document.getElementById('flash-card');
+    card.style.transform = card.style.transform==='rotateY(180deg)'?'rotateY(0deg)':'rotateY(180deg)';
+  }
+
+  function importWords(){
+    const text = document.getElementById('import-text').value.trim();
+    if(!text) return;
+    const lines = text.split('\n');
+    lines.forEach(line=>{
+      const parts = line.split(',');
+      if(parts.length>=2){
+        words.push({es:parts[0].trim(), en:parts[1].trim()});
+      }
+    });
+    saveWords();
+    document.getElementById('import-text').value='';
+    alert('Words imported and saved!');
+  }
+
+  function exportWords(){
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(words, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", "spanish_words.json");
+    dlAnchor.click();
+  }
+
+  // QUIZ
+  let quizWord=null;
+  function newQuiz(){
+    if(words.length===0) return alert('Add some words first!');
+    quizWord = words[Math.floor(Math.random()*words.length)];
+    document.getElementById('quiz-word').innerText = quizWord.es;
+    document.getElementById('quiz-input').value="";
+    document.getElementById('quiz-result').innerText="";
+  }
+  function checkQuiz(){
+    if(!quizWord) return;
+    const ans = document.getElementById('quiz-input').value.trim().toLowerCase();
+    const resultEl = document.getElementById('quiz-result');
+    resultEl.className='';
+    if(ans === quizWord.en.toLowerCase()){
+      resultEl.innerText="Correct!";
+      resultEl.style.color="green";
+      resultEl.classList.add('correct-animation');
+    } else{
+      resultEl.innerText="Wrong! It means: "+quizWord.en;
+      resultEl.style.color="red";
+      resultEl.classList.add('wrong-animation');
+    }
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === "Enter"){
+      const flashPanel = document.getElementById('flash').classList.contains('active');
+      const quizPanel = document.getElementById('quiz').classList.contains('active');
+      if(flashPanel){ flipFlash(); }
+      if(quizPanel){ checkQuiz(); }
+      e.preventDefault();
+    }
+    if(e.key === "Shift"){
+      const flashPanel = document.getElementById('flash').classList.contains('active');
+      const quizPanel = document.getElementById('quiz').classList.contains('active');
+      if(flashPanel){ nextFlash(); }
+      if(quizPanel){ newQuiz(); }
+      e.preventDefault();
+    }
+  });
+</script>
+</body>
+</html>
